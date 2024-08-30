@@ -1,6 +1,7 @@
 """Coordinator for Pixii Home integration."""
 from datetime import timedelta
 import logging
+import json
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
