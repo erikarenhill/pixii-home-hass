@@ -1,7 +1,6 @@
 """Platform for sensor integration."""
 from __future__ import annotations
 
-from datetime import timedelta
 import logging
 import json
 
@@ -12,21 +11,14 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
-    CONF_HOST,
-    CONF_PORT,
     PERCENTAGE,
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import (
-    CoordinatorEntity,
-    DataUpdateCoordinator,
-)
-from homeassistant.helpers.entity import DeviceInfo
-from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import CONF_POLL_INTERVAL, DOMAIN
-from .sunspec_reader import SunSpecReader
+from .const import DOMAIN
+from .coordinator import PixiiHomeDataCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -34,26 +26,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     """Set up the Pixii Home sensor platform."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
     async_add_entities([PixiiHomeBatterySensor(coordinator)], True)
-
-class PixiiHomeDataCoordinator(DataUpdateCoordinator):
-    """Class to manage fetching Pixii Home data."""
-
-    def __init__(self, hass, reader, poll_interval):
-        """Initialize."""
-        super().__init__(
-            hass,
-            _LOGGER,
-            name=DOMAIN,
-            update_interval=timedelta(seconds=poll_interval),
-        )
-        self.reader = reader
-        self.data = None
-
-    async def _async_update_data(self):
-        """Fetch data from Pixii Home reader."""
-        self.data = await self.reader.async_read_data()
-        _LOGGER.debug("All Data:\n%s", json.dumps(self.data, indent=2))
-        return self.data
 
 class PixiiHomeBatterySensor(CoordinatorEntity, SensorEntity):
     """Representation of a Pixii Home Battery Sensor."""
