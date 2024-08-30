@@ -1,0 +1,45 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "Connect to Pixii Home",
+                "description": "Set up your Pixii Home integration",
+                "data": {
+                    "host": "IP Address",
+                    "port": "Port",
+                    "poll_interval": "Poll Interval (seconds)"
+                }
+            }
+        },
+        "error": {
+            "cannot_connect": "Failed to connect",
+            "invalid_auth": "Invalid authentication",
+            "unknown": "Unexpected error"
+        },
+        "abort": {
+            "already_configured": "Device is already configured"
+        }
+    },
+    "entity": {
+        "sensor": {
+            "battery_capacity": {
+                "name": "Battery Capacity"
+            },
+            "battery_soc": {
+                "name": "Battery State of Charge"
+            },
+            "battery_voltage": {
+                "name": "Battery Voltage"
+            },
+            "battery_power": {
+                "name": "Battery Power"
+            },
+            "battery_max_charge_power": {
+                "name": "Battery Max Charge Power"
+            },
+            "battery_max_discharge_power": {
+                "name": "Battery Max Discharge Power"
+            }
+        }
+    }
+}
