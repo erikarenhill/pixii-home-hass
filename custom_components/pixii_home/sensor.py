@@ -31,7 +31,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         PixiiHomeBatterySensor(coordinator),
         PixiiHomeChargingSensor(coordinator),
         PixiiHomeDischargingSensor(coordinator),
-        PixiiHomeAvailableEnergySensor(coordinator)
+        PixiiHomeAvailableEnergySensor(coordinator),
+        PixiiHomeUsableEnergySensor(coordinator)  # Add the new sensor
     ], True)
 
 class PixiiHomeBaseSensor(CoordinatorEntity, SensorEntity):
@@ -150,5 +151,41 @@ class PixiiHomeAvailableEnergySensor(PixiiHomeBaseSensor):
             return {
                 "total_capacity_kwh": round(battery_data.get("WHRtg", 0) / 1000, 2),
                 "state_of_charge_percent": battery_data.get("SoC", 0)
+            }
+        return {}
+
+class PixiiHomeUsableEnergySensor(PixiiHomeBaseSensor):
+    """Representation of a Pixii Home Usable Energy Sensor."""
+
+    def __init__(self, coordinator):
+        """Initialize the sensor."""
+        super().__init__(coordinator, "Pixii Home Usable Energy Left", "usable_energy")
+        self._attr_device_class = SensorDeviceClass.ENERGY
+        self._attr_native_unit_of_measurement = ENERGY_KILO_WATT_HOUR
+
+    @property
+    def native_value(self):
+        """Return the state of the sensor."""
+        battery_data = self._get_battery_data()
+        if battery_data and all(key in battery_data for key in ["WHRtg", "SoC", "SoCRsvMin"]):
+            wh_rating = battery_data["WHRtg"]
+            current_soc = battery_data["SoC"]
+            min_soc = battery_data["SoCRsvMin"]
+            
+            usable_soc = max(current_soc - min_soc, 0)  # Ensure non-negative value
+            usable_wh = (wh_rating * usable_soc) / 100
+            return round(usable_wh / 1000, 2)  # Convert Wh to kWh and round to 2 decimal places
+        return None
+
+    @property
+    def extra_state_attributes(self):
+        """Return extra state attributes."""
+        battery_data = self._get_battery_data()
+        if battery_data:
+            return {
+                "current_soc_percent": battery_data.get("SoC", 0),
+                "min_soc_percent": battery_data.get("SoCRsvMin", 0),
+                "max_soc_percent": battery_data.get("SocRsvMax", 0),
+                "total_capacity_kwh": round(battery_data.get("WHRtg", 0) / 1000, 2),
             }
         return {}
