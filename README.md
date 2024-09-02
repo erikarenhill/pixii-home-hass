@@ -50,3 +50,9 @@ This integration is developed and maintained by [@erikarenhill](https://github.c
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Support the Project
+
+If you find this integration helpful and would like to support its development, you can buy me a coffee:
+
+[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://buymeacoffee.com/gax2vuf)
