@@ -1,6 +1,13 @@
 # Pixii Home for Home Assistant
 
-This custom integration allows you to monitor your Pixii Home energy storage system through Home Assistant.
+This custom integration allows you to monitor your Pixii Home energy storage system through Home Assistant using the SunSpec standard.
+
+## Prerequisites
+
+Before installing this integration, ensure that:
+
+1. You have enabled Modbus TCP in your Pixii gateway. This is required for the integration to communicate with your Pixii Home system.
+2. You know the IP address and port of your Pixii gateway.
 
 ## Installation
 
@@ -31,7 +38,7 @@ After installation, you can add the Pixii Home integration through the Home Assi
 
 ## Features
 
-This integration allows you to monitor various aspects of your Pixii Home energy storage system, including:
+This integration uses the SunSpec standard to monitor various aspects of your Pixii Home energy storage system, including:
 
 - Current power output
 - Battery state of charge
