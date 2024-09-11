@@ -13,6 +13,9 @@ from homeassistant.const import (
     PERCENTAGE,
     POWER_WATT,
     ENERGY_KILO_WATT_HOUR,
+    FREQUENCY_HERTZ,
+    TEMP_CELSIUS,
+    __version__ as HA_VERSION,
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -32,7 +35,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         PixiiHomeChargingSensor(coordinator),
         PixiiHomeDischargingSensor(coordinator),
         PixiiHomeAvailableEnergySensor(coordinator),
-        PixiiHomeUsableEnergySensor(coordinator)  # Add the new sensor
+        PixiiHomeUsableEnergySensor(coordinator),
+        PixiiHomeInfoSensor(coordinator),
+        PixiiHomeInverterSensor(coordinator),
+        PixiiHomeFrequencySensor(coordinator),
+        PixiiHomeCabinetTempSensor(coordinator),
+        PixiiHomeTransformerTempSensor(coordinator),
+        PixiiHomeStateSensor(coordinator),
+        PixiiHomeVendorStateSensor(coordinator),
+        PixiiHomeFirmwareVersionSensor(coordinator),
     ], True)
 
 class PixiiHomeBaseSensor(CoordinatorEntity, SensorEntity):
@@ -49,6 +60,16 @@ class PixiiHomeBaseSensor(CoordinatorEntity, SensorEntity):
     @property
     def device_info(self) -> DeviceInfo:
         """Return device information about this Pixii Home device."""
+        info_data = self._get_info_data()
+        if info_data:
+            return DeviceInfo(
+                identifiers={(DOMAIN, self.coordinator.config_entry.entry_id)},
+                name="Pixii Home",
+                manufacturer=info_data.get("Mn", "Pixii"),
+                model=info_data.get("Md", "Battery"),
+                sw_version=info_data.get("Vr", "Unknown"),
+                hw_version=info_data.get("SN", "Unknown"),
+            )
         return DeviceInfo(
             identifiers={(DOMAIN, self.coordinator.config_entry.entry_id)},
             name="Pixii Home",
@@ -56,16 +77,27 @@ class PixiiHomeBaseSensor(CoordinatorEntity, SensorEntity):
             model="Battery",
         )
 
-    def _get_battery_data(self):
-        """Get the battery data from the coordinator data."""
+    def _get_data(self, id):
+        """Get the data from the coordinator data."""
         if not self.coordinator.data or 'models' not in self.coordinator.data:
             return None
         
-        # Find the model with ID 802 (battery model)
+        # Find the model with ID 1
         for model in self.coordinator.data['models']:
-            if model.get('ID') == 802:
+            if model.get('ID') == id:
                 return model
+            
         return None
+    
+
+    def _get_info_data(self):
+        return self._get_data(1)
+    
+    def _get_inverter_data(self):
+        return self._get_data(103)
+
+    def _get_battery_data(self):
+        return self._get_data(802)
 
 class PixiiHomeBatterySensor(PixiiHomeBaseSensor):
     """Representation of a Pixii Home Battery Sensor."""
@@ -189,3 +221,164 @@ class PixiiHomeUsableEnergySensor(PixiiHomeBaseSensor):
                 "total_capacity_kwh": round(battery_data.get("WHRtg", 0) / 1000, 2),
             }
         return {}
+
+class PixiiHomeInfoSensor(PixiiHomeBaseSensor):
+    """Representation of a Pixii Home Info Sensor."""
+
+    def __init__(self, coordinator):
+        """Initialize the sensor."""
+        super().__init__(coordinator, "Pixii Home Info", "info")
+        self._attr_device_class = SensorDeviceClass.ENUM
+        self._attr_native_unit_of_measurement = None
+
+    @property
+    def native_value(self):
+        """Return the state of the sensor."""
+        info_data = self._get_info_data()
+        if info_data:
+            return f"{info_data.get('Mn', 'Unknown')} {info_data.get('Md', 'Unknown')}"
+        return None
+
+    @property
+    def extra_state_attributes(self):
+        """Return extra state attributes."""
+        info_data = self._get_info_data()
+        if info_data:
+            return {
+                "manufacturer": info_data.get("Mn", "Unknown"),
+                "model": info_data.get("Md", "Unknown"),
+                "version": info_data.get("Vr", "Unknown"),
+                "serial_number": info_data.get("SN", "Unknown")
+            }
+        return {}
+
+class PixiiHomeInverterSensor(PixiiHomeBaseSensor):
+    """Representation of a Pixii Home Inverter Sensor."""
+
+    def __init__(self, coordinator):
+        """Initialize the sensor."""
+        super().__init__(coordinator, "Pixii Home Inverter", "inverter")
+        self._attr_device_class = SensorDeviceClass.ENUM
+        self._attr_native_unit_of_measurement = None
+
+    @property
+    def native_value(self):
+        """Return the state of the sensor."""
+        inverter_data = self._get_inverter_data()
+        if inverter_data:
+            return "Online"
+        return "Offline"
+
+    @property
+    def extra_state_attributes(self):
+        """Return all attributes of the inverter."""
+        return self._get_inverter_data() or {}
+
+class PixiiHomeFrequencySensor(PixiiHomeBaseSensor):
+    """Representation of a Pixii Home Frequency Sensor."""
+
+    def __init__(self, coordinator):
+        """Initialize the sensor."""
+        super().__init__(coordinator, "Pixii Home Frequency", "frequency")
+        self._attr_device_class = SensorDeviceClass.FREQUENCY
+        self._attr_native_unit_of_measurement = FREQUENCY_HERTZ
+
+    @property
+    def native_value(self):
+        """Return the state of the sensor."""
+        inverter_data = self._get_inverter_data()
+        if inverter_data and "Hz" in inverter_data:
+            return inverter_data["Hz"]
+        return None
+
+class PixiiHomeCabinetTempSensor(PixiiHomeBaseSensor):
+    """Representation of a Pixii Home Cabinet Temperature Sensor."""
+
+    def __init__(self, coordinator):
+        """Initialize the sensor."""
+        super().__init__(coordinator, "Pixii Home Cabinet Temperature", "cabinet_temp")
+        self._attr_device_class = SensorDeviceClass.TEMPERATURE
+        self._attr_native_unit_of_measurement = TEMP_CELSIUS
+
+    @property
+    def native_value(self):
+        """Return the state of the sensor."""
+        inverter_data = self._get_inverter_data()
+        if inverter_data and "TmpCab" in inverter_data:
+            return inverter_data["TmpCab"]
+        return None
+
+class PixiiHomeTransformerTempSensor(PixiiHomeBaseSensor):
+    """Representation of a Pixii Home Transformer Temperature Sensor."""
+
+    def __init__(self, coordinator):
+        """Initialize the sensor."""
+        super().__init__(coordinator, "Pixii Home Transformer Temperature", "transformer_temp")
+        self._attr_device_class = SensorDeviceClass.TEMPERATURE
+        self._attr_native_unit_of_measurement = TEMP_CELSIUS
+
+    @property
+    def native_value(self):
+        """Return the state of the sensor."""
+        inverter_data = self._get_inverter_data()
+        if inverter_data and "TmpTrns" in inverter_data:
+            return inverter_data["TmpTrns"]
+        return None
+
+class PixiiHomeStateSensor(PixiiHomeBaseSensor):
+    """Representation of a Pixii Home State Sensor."""
+
+    def __init__(self, coordinator):
+        """Initialize the sensor."""
+        super().__init__(coordinator, "Pixii Home State", "state")
+        self._attr_device_class = SensorDeviceClass.ENUM
+        self._attr_native_unit_of_measurement = None
+
+    @property
+    def native_value(self):
+        """Return the state of the sensor."""
+        inverter_data = self._get_inverter_data()
+        if inverter_data and "St" in inverter_data:
+            return inverter_data["St"]
+        return None
+
+class PixiiHomeVendorStateSensor(PixiiHomeBaseSensor):
+    """Representation of a Pixii Home Vendor State Sensor."""
+
+    def __init__(self, coordinator):
+        """Initialize the sensor."""
+        super().__init__(coordinator, "Pixii Home Vendor State", "vendor_state")
+        self._attr_device_class = SensorDeviceClass.ENUM
+        self._attr_native_unit_of_measurement = None
+
+    @property
+    def native_value(self):
+        """Return the state of the sensor."""
+        inverter_data = self._get_inverter_data()
+        if inverter_data and "StVnd" in inverter_data:
+            return inverter_data["StVnd"]
+        return None
+
+class PixiiHomeFirmwareVersionSensor(PixiiHomeBaseSensor):
+    """Representation of a Pixii Home Firmware Version Sensor."""
+
+    def __init__(self, coordinator):
+        """Initialize the sensor."""
+        super().__init__(coordinator, "Pixii Home Firmware Version", "firmware_version")
+        self._attr_device_class = None
+        self._attr_native_unit_of_measurement = None
+
+    @property
+    def native_value(self):
+        """Return the firmware version."""
+        info_data = self._get_info_data()
+        if info_data and "Vr" in info_data:
+            return info_data["Vr"]
+        return None
+
+    @property
+    def extra_state_attributes(self):
+        """Return extra state attributes."""
+        return {
+            "home_assistant_version": HA_VERSION,
+        }
