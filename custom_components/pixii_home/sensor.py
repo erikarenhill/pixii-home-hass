@@ -365,7 +365,7 @@ class PixiiHomeFirmwareVersionSensor(PixiiHomeBaseSensor):
     def __init__(self, coordinator):
         """Initialize the sensor."""
         super().__init__(coordinator, "Pixii Home Firmware Version", "firmware_version")
-        self._attr_device_class = None
+        self._attr_device_class = SensorDeviceClass.ENUM
         self._attr_native_unit_of_measurement = None
 
     @property
@@ -375,10 +375,3 @@ class PixiiHomeFirmwareVersionSensor(PixiiHomeBaseSensor):
         if info_data and "Vr" in info_data:
             return info_data["Vr"]
         return None
-
-    @property
-    def extra_state_attributes(self):
-        """Return extra state attributes."""
-        return {
-            "home_assistant_version": HA_VERSION,
-        }
